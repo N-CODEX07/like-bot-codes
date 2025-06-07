@@ -3,7 +3,7 @@ services:
   telegram-bot:
     build: .
     environment:
-      - BOT_TOKEN=7735767619:AAG8mjHAIvPyBviZEcPuiGWCOv-Y8W2NDyA
+      - BOT_TOKEN=7735767619:AAGtvanJfb_N6OoOXyEs8znnWVJlbslAToY
       - API_URL_TEMPLATE=https://nr-codex-like-api2.vercel.app/like?uid={uid}&server_name=ind
       - WEBHOOK_URL=$https://like-bot-codes.onrender.com/
       - PORT=$5000
