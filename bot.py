@@ -6,6 +6,9 @@ import asyncio
 import nest_asyncio
 import threading
 import time
+import os
+
+# any other imports you need
 
 from telegram import Update
 from telegram.ext import (
@@ -16,9 +19,8 @@ from telegram.ext import (
 )
 
 nest_asyncio.apply()
-
-# ========= CONFIG =========
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+# ========= CONFIG =========
 API_URL_TEMPLATE = os.getenv("API_URL_TEMPLATE")
 ADMIN_IDS = [6761595092]
 ALLOWED_GROUPS = [-1002621833445, -1002313640096]
