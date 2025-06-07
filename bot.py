@@ -14,7 +14,7 @@ from telegram.ext import (
 )
 
 # ========= CONFIG =========
-BOT_TOKEN = 7735767619:AAG8mjHAIvPyBviZEcPuiGWCOv-Y8W2NDyA
+BOT_TOKEN = 7735767619:AAGtvanJfb_N6OoOXyEs8znnWVJlbslAToY
 API_URL_TEMPLATE = os.environ.get("API_URL_TEMPLATE")
 WEBHOOK_URL = https://like-bot-codes.onrender.com/
 PORT = int(os.environ.get("PORT", 5000))
