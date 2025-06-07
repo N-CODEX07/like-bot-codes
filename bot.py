@@ -14,7 +14,7 @@ from telegram.ext import (
 )
 
 # ========= CONFIG =========
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+BOT_TOKEN = os.environ.get("7735767619:AAG8mjHAIvPyBviZEcPuiGWCOv-Y8W2NDyA")
 API_URL_TEMPLATE = os.environ.get("API_URL_TEMPLATE")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", 5000))
