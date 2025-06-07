@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  telegram-bot:
+    build: .
+    environment:
+      - BOT_TOKEN=7735767619:AAG8mjHAIvPyBviZEcPuiGWCOv-Y8W2NDyA
+      - API_URL_TEMPLATE=https://nr-codex-like-api2.vercel.app/like?uid={uid}&server_name=ind
+      - WEBHOOK_URL=$https://like-bot-codes.onrender.com/
+      - PORT=${PORT}
+    ports:
+      - "${PORT}:${PORT}"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
