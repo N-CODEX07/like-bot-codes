@@ -6,9 +6,9 @@ services:
       - BOT_TOKEN=7735767619:AAG8mjHAIvPyBviZEcPuiGWCOv-Y8W2NDyA
       - API_URL_TEMPLATE=https://nr-codex-like-api2.vercel.app/like?uid={uid}&server_name=ind
       - WEBHOOK_URL=$https://like-bot-codes.onrender.com/
-      - PORT=${PORT}
+      - PORT=$5000
     ports:
-      - "${PORT}:${PORT}"
+      - "$5000:$5000"
     restart: unless-stopped
     deploy:
       resources:
