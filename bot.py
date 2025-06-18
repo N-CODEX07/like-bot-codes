@@ -15,7 +15,7 @@ from telegram.ext import (
 
 # ========= CONFIG =========
 BOT_TOKEN = "7735767619:AAGtvanJfb_N6OoOXyEs8znnWVJlbslAToY"
-API_URL_TEMPLATE = os.environ.get("API_URL_TEMPLATE")
+API_URL = "https://paid-like-api-0325.vercel.app/like?server_name={region}&uid={uid}"
 WEBHOOK_URL = "https://like-bot-codes.onrender.com/"
 PORT = int(os.environ.get("PORT", 5000))
 ADMIN_IDS = [6761595092]
@@ -373,7 +373,8 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         user_data[user_id] = {"date": today, "count": user_info.get("count", 0)}
     try:
-        response = requests.get(API_URL_TEMPLATE.format(uid=uid), timeout=10)
+        api_url = API_URL.format(region=region, uid=uid)
+        response = requests.get(api_url, timeout=10)
         response.raise_for_status()
         data = response.json()
         logger.info(f"API response for UID {uid}: {data}")
@@ -381,13 +382,13 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"API error for UID {uid}: {e}")
         await processing_msg.edit_text("🚨 API Error! Try again later.")
         return
-    if data.get("LikesGivenByAPI") == 0:
-        await processing_msg.edit_text("⚠️ UID has already reached max likes today.")
-        return
-    required_keys = ["PlayerNickname", "UID", "LikesbeforeCommand", "LikesafterCommand", "LikesGivenByAPI"]
+    required_keys = ["PlayerNickname", "UID", "LikesbeforeCommand", "LikesafterCommand", "LikesGivenByAPI", "status"]
     if not all(key in data for key in required_keys):
-        await processing_msg.edit_text("⚠️ Invalid UID or unable to fetch details.🙁 Please check UID or try again later.")
+        await processing_msg.edit_text("⚠️ Invalid UID or unable to fetch details. 🙁 Please check UID or try again later.")
         logger.warning(f"Incomplete API response for UID {uid}: {data}")
+        return
+    if data.get("status") != 2 or data.get("LikesGivenByAPI") == 0:
+        await processing_msg.edit_text("⚠️ UID has already reached max likes today or invalid request.")
         return
     if not is_vip:
         user_data[user_id]["count"] += 1
@@ -396,12 +397,12 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ Like Sent Successfully!\n\n"
         f"👤 Name: {data['PlayerNickname']}\n"
         f"🆔 UID: {data['UID']}\n"
-        f"🌍 Server: {data['AccountRegion']}\n"
-        f"💀 Player Level: {data['AccountLevel']}\n"
+        f"🌍 Server: {region.upper()}\n"
         f"😭 Before: {data['LikesbeforeCommand']}\n"
         f"☠️ After: {data['LikesafterCommand']}\n"
         f"😊 Given: {data['LikesGivenByAPI']}\n"
-        f"🔥 OWNER: @NR_CODEX")
+        f"🔥 OWNER: @NR_CODEX"
+    )
     if promotion_message:
         text += f"\n\n📢 {promotion_message}"
     try:
@@ -705,7 +706,7 @@ async def main():
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
-    if not all([BOT_TOKEN, WEBHOOK_URL, API_URL_TEMPLATE]):
-        logger.error("Missing required environment variables: BOT_TOKEN, WEBHOOK_URL, or API_URL_TEMPLATE")
+    if not all([BOT_TOKEN, WEBHOOK_URL]):
+        logger.error("Missing required environment variables: BOT_TOKEN or WEBHOOK_URL")
         exit(1)
     asyncio.run(main())
