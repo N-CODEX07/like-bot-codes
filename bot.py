@@ -15,7 +15,7 @@ from telegram.ext import (
 
 # ========= CONFIG =========
 BOT_TOKEN = "7735767619:AAGtvanJfb_N6OoOXyEs8znnWVJlbslAToY"
-API_URL = "https://nr-codex-like-api3.vercel.app/like?uid={uid}&server_name={region}"  # Fixed endpoint
+API_URL = "https://nr-codex-like-api3.vercel.app/like?uid={uid}&server_name={region}"
 WEBHOOK_URL = "https://like-bot-codes.onrender.com/"
 PORT = int(os.environ.get("PORT", 5000))
 ADMIN_IDS = [6761595092]
@@ -374,7 +374,7 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Usage: /like ind <uid>")
         return
     processing_msg = await update.message.reply_text("⏳ Processing your request...")
-    region, uid = args  # Changed from count to uid
+    region, uid = args
     user_id = update.effective_user.id
     today = get_today()
     is_vip = user_id in vip_users
@@ -408,14 +408,20 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await processing_msg.edit_text("⚠️ Invalid UID or unable to fetch details. 🙁 Please check UID or try again later.")
         logger.warning(f"Incomplete API response for UID {uid}: {data}")
         return
-    if data.get("status") != 2 or data.get("LikesGivenByAPI") == 0:
-        await processing_msg.edit_text("⚠️ UID has already reached max likes today or invalid request.")
+    # Updated status check for status 1 or 2
+    if data.get("status") not in [1, 2]:
+        await processing_msg.edit_text(f"⚠️ Invalid response status: {data.get('status')}. Please try again or contact @NR_CODEX.")
+        logger.warning(f"Invalid status {data.get('status')} for UID {uid}")
+        return
+    if data.get("LikesGivenByAPI") == 0 or data.get("LikesbeforeCommand") == data.get("LikesafterCommand"):
+        await processing_msg.edit_text("⚠️ UID has already reached max likes today or no likes added.")
+        logger.info(f"No likes added for UID {uid}: {data}")
         return
     if not is_vip:
         user_data[user_id]["count"] += 1
     group_usage[group_id] = group_usage.get(group_id, 0) + 1
     text = (
-        f"✅ Like Sent Successfully!\n\n"
+        f"✅ Like Sent Successfully! (Status: {data.get('status')})\n\n"
         f"👤 Name: {data['PlayerNickname']}\n"
         f"🆔 UID: {data['UID']}\n"
         f"🌍 Server: {region.upper()}\n"
@@ -481,7 +487,7 @@ async def allow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         gid = int(context.args[0]) if context.args else update.effective_chat.id
         allowed_groups.add(gid)
-        logger.info(f"Group {gid} added to allowed_groups: {allowed_groups}")
+        logger.info(f"Added group {gid} to allowed_groups: {allowed_groups}")
         await update.message.reply_text(f"✅ Group {gid} allowed.")
     except Exception as e:
         logger.error(f"Error in allow command: {e}")
@@ -495,7 +501,7 @@ async def remove(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         gid = int(context.args[0])
         allowed_groups.discard(gid)
-        logger.info(f"Group {gid} removed from allowed_groups: {allowed_groups}")
+        logger.info(f"Removed group {gid} from allowed_groups: {allowed_groups}")
         await update.message.reply_text(f"❌ Group {gid} removed.")
     except Exception as e:
         logger.error(f"Error in remove command: {e}")
@@ -504,7 +510,7 @@ async def remove(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @check_command_enabled
 async def groupreset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
-        await update.message.reply_text("⛔ Unauthorized command usage.")
+        await update.message.reply_text("⛔ Unauthorized")
         return
     group_usage.clear()
     await update.message.reply_text("✅ Group usage reset!")
@@ -519,14 +525,14 @@ async def setremain(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     group_id = update.effective_chat.id
     group_limits[group_id] = int(context.args[0])
-    await update.message.reply_text(f"✅ Daily group limit set to {context.args[0]} likes.")
+    await update.message.reply_text(f"✅ Daily group limit set to: {context.args[0]} likes.")
 
 @check_command_enabled
 async def autogroupreset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
-        await update.message.reply_text("⛔ Unauthorized command usage.")
+        await update.message.reply_text("⛔ Unauthorized")
         return
-    await update.message.reply_text("✅ Group auto-reset is active. Runs daily at 4:30 AM.")
+    await update.message.reply_text("✅ Group auto-resumes is active. Runs daily at 4:30 AM.")
 
 @check_command_enabled
 async def setvip(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -582,7 +588,7 @@ async def setadmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⛔ You are not authorized.")
         return
     replied_user = update.message.reply_to_message.from_user if update.message.reply_to_message else None
-    user_id = replied_user.id if replied_user else (int(context.args[0]) if context.args else None)
+    user_id = update.message.reply_to_message.from_user.id if replied_user else (int(context.args[0]) if context.args else None)
     if not user_id:
         await update.message.reply_text("⚠️ Usage: Reply to a user with `/setadmin` OR use `/setadmin <user_id>`")
         return
@@ -621,7 +627,7 @@ async def adminlist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_list = []
     for user_id in ADMIN_IDS:
         name = await get_user_name(context, user_id)
-        admin_list.append(f"🛡️ {name} (ID: {user_id})")
+        admin_list.append(f"🦅 {name} (ID: {user_id})")
     await update.message.reply_text("🔐 Admins:\n" + "\n".join(admin_list))
 
 @check_command_enabled
@@ -646,7 +652,7 @@ async def on(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def reset_group_usage_task():
     while True:
         try:
-            now = datetime.datetime.now()
+            now = datetime.now()
             reset_time = now.replace(hour=4, minute=30, second=0, microsecond=0)
             if now >= reset_time:
                 reset_time += datetime.timedelta(days=1)
@@ -675,7 +681,7 @@ async def health_check(request: web.Request):
     return web.Response(text="Bot is running", status=200)
 
 async def set_webhook():
-    bot = Bot(BOT_TOKEN)
+    bot = Bot(token=BOT_TOKEN)
     try:
         await bot.set_webhook(url=WEBHOOK_URL)
         logger.info(f"Webhook set to {WEBHOOK_URL}")
