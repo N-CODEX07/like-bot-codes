@@ -15,12 +15,12 @@ from telegram.ext import (
 
 # ========= CONFIG =========
 BOT_TOKEN = "7735767619:AAGtvanJfb_N6OoOXyEs8znnWVJlbslAToY"
-API_URL = "https://nr-codex-like-api3.vercel.app/api/like?serverName={region}&uid={count}"  # Updated endpoint
+API_URL = "https://nr-codex-like-api3.vercel.app/like?uid={uid}&server_name={region}"  # Fixed endpoint
 WEBHOOK_URL = "https://like-bot-codes.onrender.com/"
 PORT = int(os.environ.get("PORT", 5000))
-ADMIN_IDS = [6761595092]  # Hardcoded admin ID
-ALLOWED_GROUPS = {-1002621833445, -1002313640096}  # Hardcoded group IDs
-vip_users = {6761595092}  # Admin is also VIP
+ADMIN_IDS = [6761595092]
+ALLOWED_GROUPS = {-1002621833445, -1002313640096}
+vip_users = {6761595092}
 DEFAULT_DAILY_LIMIT = 1000
 
 # ========= STATE =========
@@ -374,7 +374,7 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Usage: /like ind <uid>")
         return
     processing_msg = await update.message.reply_text("⏳ Processing your request...")
-    region, count = args
+    region, uid = args  # Changed from count to uid
     user_id = update.effective_user.id
     today = get_today()
     is_vip = user_id in vip_users
@@ -385,28 +385,28 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         user_data[user_id] = {"date": today, "count": user_info.get("count", 0)}
     try:
-        api_url = API_URL.format(region=region, count=count)
+        api_url = API_URL.format(uid=uid, region=region)
         logger.info(f"Calling API: {api_url}")
         response = requests.get(api_url, timeout=10)
         response.raise_for_status()
         data = response.json()
-        logger.info(f"API response for UID {count}: {data}")
+        logger.info(f"API response for UID {uid}: {data}")
     except requests.exceptions.HTTPError as e:
         if response.status_code == 404:
-            logger.error(f"API returned 404 for UID {count}: Endpoint not found")
+            logger.error(f"API returned 404 for UID {uid}: Endpoint not found")
             await processing_msg.edit_text("🚨 Like service is currently unavailable (API not found). Please try again later or contact @NR_CODEX.")
             return
-        logger.error(f"API HTTP error for UID {count}: {e}")
+        logger.error(f"API HTTP error for UID {uid}: {e}")
         await processing_msg.edit_text("🚨 API Error! Try again later.")
         return
     except Exception as e:
-        logger.error(f"API error for UID {count}: {e}")
+        logger.error(f"API error for UID {uid}: {e}")
         await processing_msg.edit_text("🚨 API Error! Try again later.")
         return
     required_keys = ["PlayerNickname", "UID", "LikesbeforeCommand", "LikesafterCommand", "LikesGivenByAPI", "status"]
     if not all(key in data for key in required_keys):
         await processing_msg.edit_text("⚠️ Invalid UID or unable to fetch details. 🙁 Please check UID or try again later.")
-        logger.warning(f"Incomplete API response for UID {count}: {data}")
+        logger.warning(f"Incomplete API response for UID {uid}: {data}")
         return
     if data.get("status") != 2 or data.get("LikesGivenByAPI") == 0:
         await processing_msg.edit_text("⚠️ UID has already reached max likes today or invalid request.")
