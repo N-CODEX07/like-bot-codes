@@ -87,6 +87,7 @@ async def check_group_access(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_group_access(update, context):
         return
+    logger.info(f"Received /start from user {update.effective_user.id}")
     await update.message.reply_text("👋 Welcome! Use /like ind <uid> to get Free Fire likes.")
 
 @check_command_enabled
@@ -375,7 +376,7 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         api_url = API_URL.format(region=region, uid=uid)
         response = requests.get(api_url, timeout=10)
-        response.raise_for_status()  # Raises HTTPError for 4xx/5xx responses
+        response.raise_for_status()
         data = response.json()
         logger.info(f"API response for UID {uid}: {data}")
     except requests.exceptions.HTTPError as e:
@@ -649,12 +650,14 @@ async def webhook_handler(request: web.Request):
         app = request.app['telegram_app']
         update = Update.de_json(await request.json(), app.bot)
         await app.process_update(update)
+        logger.info("Webhook update processed successfully")
         return web.Response(status=200)
     except Exception as e:
         logger.error(f"Error processing webhook update: {e}")
         return web.Response(status=500)
 
 async def health_check(request: web.Request):
+    logger.info("Health check requested")
     return web.Response(text="Bot is running", status=200)
 
 async def set_webhook():
@@ -701,7 +704,7 @@ async def main():
     telegram_app = setup_application()
     web_app = web.Application()
     web_app['telegram_app'] = telegram_app
-    web_app.router.add_post('/webhook', webhook_handler)
+    web_app.router.add_post('/', webhook_handler)  # Fixed webhook path to '/'
     web_app.router.add_get('/health', health_check)
     await set_webhook()
     runner = web.AppRunner(web_app)
