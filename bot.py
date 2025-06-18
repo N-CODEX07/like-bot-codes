@@ -15,7 +15,7 @@ from telegram.ext import (
 
 # ========= CONFIG =========
 BOT_TOKEN = "7735767619:AAGtvanJfb_N6OoOXyEs8znnWVJlbslAToY"
-API_URL = "https://paid-like-api-0325.vercel.app/like?server_name={region}&uid={uid}"
+API_URL = "https://nr-codex-like-api3.vercel.app/like?server_name={region}&uid={uid}"
 WEBHOOK_URL = "https://like-bot-codes.onrender.com/"
 PORT = int(os.environ.get("PORT", 5000))
 ADMIN_IDS = [6761595092]
@@ -375,9 +375,17 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         api_url = API_URL.format(region=region, uid=uid)
         response = requests.get(api_url, timeout=10)
-        response.raise_for_status()
+        response.raise_for_status()  # Raises HTTPError for 4xx/5xx responses
         data = response.json()
         logger.info(f"API response for UID {uid}: {data}")
+    except requests.exceptions.HTTPError as e:
+        if response.status_code == 404:
+            logger.error(f"API returned 404 for UID {uid}: Endpoint not found")
+            await processing_msg.edit_text("🚨 Like service is currently unavailable (API not found). Please try again later or contact @NR_CODEX.")
+            return
+        logger.error(f"API HTTP error for UID {uid}: {e}")
+        await processing_msg.edit_text("🚨 API Error! Try again later.")
+        return
     except Exception as e:
         logger.error(f"API error for UID {uid}: {e}")
         await processing_msg.edit_text("🚨 API Error! Try again later.")
