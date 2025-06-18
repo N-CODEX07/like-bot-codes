@@ -15,12 +15,12 @@ from telegram.ext import (
 
 # ========= CONFIG =========
 BOT_TOKEN = "7735767619:AAGtvanJfb_N6OoOXyEs8znnWVJlbslAToY"
-API_URL = "https://nr-codex-like-api3.vercel.app/like?server_name={region}&uid={uid}"
+API_URL = "https://nr-codex-like-api3.vercel.app/api/like?serverName={region}&uid={count}"  # Updated endpoint
 WEBHOOK_URL = "https://like-bot-codes.onrender.com/"
 PORT = int(os.environ.get("PORT", 5000))
-ADMIN_IDS = [6761595092]
-ALLOWED_GROUPS = {-1002621833445, -1002313640095}
-vip_users = {6761595092}
+ADMIN_IDS = [6761595092]  # Hardcoded admin ID
+ALLOWED_GROUPS = {-1002621833445, -1002313640096}  # Hardcoded group IDs
+vip_users = {6761595092}  # Admin is also VIP
 DEFAULT_DAILY_LIMIT = 1000
 
 # ========= STATE =========
@@ -38,6 +38,11 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+
+# Log initial state
+logger.info(f"Initialized ADMIN_IDS: {ADMIN_IDS}")
+logger.info(f"Initialized ALLOWED_GROUPS: {ALLOWED_GROUPS}")
+logger.info(f"Initialized vip_users: {vip_users}")
 
 # ========= HELPERS =========
 async def get_user_name(context: ContextTypes.DEFAULT_TYPE, user_id: int):
@@ -67,6 +72,7 @@ def check_command_enabled(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not command_enabled and update.message.text != "/on":
             await update.message.reply_text("🚫 Commands are currently disabled.")
+            logger.info(f"Commands disabled for user {update.effective_user.id}")
             return
         return await func(update, context)
     return wrapper
@@ -75,10 +81,12 @@ async def check_group_access(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not is_group(update):
         return True
     group_id = update.effective_chat.id
+    logger.info(f"Checking group access for group_id: {group_id}, allowed_groups: {allowed_groups}")
     if group_id not in allowed_groups:
         await update.message.reply_text(
             "🚫 This bot can only be used in this group: https://t.me/+kmjgWZwLAaM5NDU9\n📞 Please contact the owner @nilay_vii"
         )
+        logger.warning(f"Unauthorized group access attempt: {group_id}")
         return False
     return True
 
@@ -127,8 +135,11 @@ Bot developer: @Madara_7_UCHIHA
 
 @check_command_enabled
 async def open(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ADMIN_IDS:
+    user_id = update.effective_user.id
+    logger.info(f"Received /open from user {user_id}, ADMIN_IDS: {ADMIN_IDS}")
+    if user_id not in ADMIN_IDS:
         await update.message.reply_text("⛔ Unauthorized")
+        logger.warning(f"Unauthorized /open attempt by user {user_id}")
         return
     admin_menu = """
 📘 ADMIN TOOLS
@@ -363,7 +374,7 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Usage: /like ind <uid>")
         return
     processing_msg = await update.message.reply_text("⏳ Processing your request...")
-    region, uid = args
+    region, count = args
     user_id = update.effective_user.id
     today = get_today()
     is_vip = user_id in vip_users
@@ -374,27 +385,28 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         user_data[user_id] = {"date": today, "count": user_info.get("count", 0)}
     try:
-        api_url = API_URL.format(region=region, uid=uid)
+        api_url = API_URL.format(region=region, count=count)
+        logger.info(f"Calling API: {api_url}")
         response = requests.get(api_url, timeout=10)
         response.raise_for_status()
         data = response.json()
-        logger.info(f"API response for UID {uid}: {data}")
+        logger.info(f"API response for UID {count}: {data}")
     except requests.exceptions.HTTPError as e:
         if response.status_code == 404:
-            logger.error(f"API returned 404 for UID {uid}: Endpoint not found")
+            logger.error(f"API returned 404 for UID {count}: Endpoint not found")
             await processing_msg.edit_text("🚨 Like service is currently unavailable (API not found). Please try again later or contact @NR_CODEX.")
             return
-        logger.error(f"API HTTP error for UID {uid}: {e}")
+        logger.error(f"API HTTP error for UID {count}: {e}")
         await processing_msg.edit_text("🚨 API Error! Try again later.")
         return
     except Exception as e:
-        logger.error(f"API error for UID {uid}: {e}")
+        logger.error(f"API error for UID {count}: {e}")
         await processing_msg.edit_text("🚨 API Error! Try again later.")
         return
     required_keys = ["PlayerNickname", "UID", "LikesbeforeCommand", "LikesafterCommand", "LikesGivenByAPI", "status"]
     if not all(key in data for key in required_keys):
         await processing_msg.edit_text("⚠️ Invalid UID or unable to fetch details. 🙁 Please check UID or try again later.")
-        logger.warning(f"Incomplete API response for UID {uid}: {data}")
+        logger.warning(f"Incomplete API response for UID {count}: {data}")
         return
     if data.get("status") != 2 or data.get("LikesGivenByAPI") == 0:
         await processing_msg.edit_text("⚠️ UID has already reached max likes today or invalid request.")
@@ -469,6 +481,7 @@ async def allow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         gid = int(context.args[0]) if context.args else update.effective_chat.id
         allowed_groups.add(gid)
+        logger.info(f"Group {gid} added to allowed_groups: {allowed_groups}")
         await update.message.reply_text(f"✅ Group {gid} allowed.")
     except Exception as e:
         logger.error(f"Error in allow command: {e}")
@@ -482,6 +495,7 @@ async def remove(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         gid = int(context.args[0])
         allowed_groups.discard(gid)
+        logger.info(f"Group {gid} removed from allowed_groups: {allowed_groups}")
         await update.message.reply_text(f"❌ Group {gid} removed.")
     except Exception as e:
         logger.error(f"Error in remove command: {e}")
@@ -701,10 +715,11 @@ def setup_application():
     return app
 
 async def main():
+    logger.info("Starting bot...")
     telegram_app = setup_application()
     web_app = web.Application()
     web_app['telegram_app'] = telegram_app
-    web_app.router.add_post('/', webhook_handler)  # Fixed webhook path to '/'
+    web_app.router.add_post('/', webhook_handler)
     web_app.router.add_get('/health', health_check)
     await set_webhook()
     runner = web.AppRunner(web_app)
