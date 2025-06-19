@@ -15,7 +15,7 @@ from telegram.ext import (
 
 # ========= CONFIG =========
 BOT_TOKEN = "7735767619:AAGtvanJfb_N6OoOXyEs8znnWVJlbslAToY"
-API_URL = "https://nr-codex-like-api3.vercel.app/like?uid={uid}&server_name={region}"
+API_URL = "https://secret-like-nilay.vercel.app/like?uid={uid}&server_name={region}"
 WEBHOOK_URL = "https://like-bot-codes.onrender.com/"
 PORT = int(os.environ.get("PORT", 5000))
 ADMIN_IDS = [6761595092]
